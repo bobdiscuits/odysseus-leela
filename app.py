@@ -760,6 +760,10 @@ logger.info("Webhook & API token routes initialized")
 from routes.note_routes import setup_note_routes
 app.include_router(setup_note_routes(task_scheduler))
 
+# Ensemble Studio (persistence only; model orchestration is intentionally separate)
+from routes.ensemble_routes import setup_ensemble_routes
+app.include_router(setup_ensemble_routes())
+
 # Email
 from routes.email_routes import setup_email_routes
 email_router = setup_email_routes()

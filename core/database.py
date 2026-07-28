@@ -208,6 +208,61 @@ class ChatMessage(Base):
         Index('ix_messages_session_time', 'session_id', 'timestamp'),  # Composite for efficient message retrieval
     )
 
+
+class EnsembleSession(TimestampMixin, Base):
+    """A persistent, owner-scoped Ensemble Studio workspace."""
+    __tablename__ = "ensemble_sessions"
+
+    id = Column(String, primary_key=True, index=True)
+    owner = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False, default="Untitled ensemble")
+    participants = Column(JSON, nullable=False, default=lambda: ["Shaun", "Claude", "GPT"])
+
+    turns = relationship("EnsembleTurn", back_populates="session", cascade="all, delete-orphan")
+    decisions = relationship("EnsembleDecision", back_populates="session", cascade="all, delete-orphan")
+    artifacts = relationship("EnsembleArtifact", back_populates="session", cascade="all, delete-orphan")
+
+
+class EnsembleTurn(Base):
+    __tablename__ = "ensemble_turns"
+
+    id = Column(String, primary_key=True, index=True)
+    session_id = Column(String, ForeignKey("ensemble_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    participant = Column(String, nullable=False)
+    role = Column(String, nullable=False)  # human | ai
+    content = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=utcnow_naive, nullable=False)
+
+    session = relationship("EnsembleSession", back_populates="turns")
+    __table_args__ = (Index("ix_ensemble_turns_session_time", "session_id", "timestamp"),)
+
+
+class EnsembleDecision(Base):
+    __tablename__ = "ensemble_decisions"
+
+    id = Column(String, primary_key=True, index=True)
+    session_id = Column(String, ForeignKey("ensemble_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    created_by = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=utcnow_naive, nullable=False)
+
+    session = relationship("EnsembleSession", back_populates="decisions")
+
+
+class EnsembleArtifact(Base):
+    __tablename__ = "ensemble_artifacts"
+
+    id = Column(String, primary_key=True, index=True)
+    session_id = Column(String, ForeignKey("ensemble_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    artifact_type = Column(String, nullable=False, default="file")
+    uri = Column(Text, nullable=True)
+    meta_data = Column("metadata", JSON, nullable=False, default=dict)
+    created_by = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=utcnow_naive, nullable=False)
+
+    session = relationship("EnsembleSession", back_populates="artifacts")
+
 class Document(TimestampMixin, Base):
     """Living document that the AI can create and edit in-place."""
     __tablename__ = "documents"
